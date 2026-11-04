@@ -1,48 +1,156 @@
-const path = require("path");
+
 const Task = require("../models/Task");
-const { readJsonFile, writeJsonFile } = require("../utils/githubJsonStore");
-const {getOrSetCache, clearCache} = require("../helper/cacheService");
+const {
+  readJsonFile,
+  writeJsonFile,
+} = require("../utils/githubJsonStore");
+
+const {
+  getOrSetCache,
+  clearCache,
+} = require("../helper/cacheService");
+
 const { getUserFilePaths } = require("../helper/userFileService");
 
-// const TASK_FILE_PATH = process.env.TASK_FILE_PATH || "src/db/task.json";
+const TASK_STATUS_FILE_PATH =
+  process.env.TASK_STATUS_FILE_PATH ||
+  "src/db/taskstatus.json";
 
-// const TASKTYPE_FILE_PATH = process.env.TASKTYPE_FILE_PATH || "src/db/tasktype.json"
-// const TASKCATEGORY_FILE_PATH = process.env.TASKCATEGORY_FILE_PATH || "src/db/taskcategory.json"
-// const TELEGRAM_FILE_PATH = process.env.TELEGRAM_FILE_PATH || "src/db/telegram.json"
-// const TASKSCHEDULE_FILE_PATH = process.env.TASKSCHEDULE_FILE_PATH || "src/db/taskschedule.json"
-const TASKStATUS_FILE_PATH = process.env.TASKStATUS_FILE_PATH || "src/db/taskstatus.json"
-// const TASK_REMINDER_FILE_PATH = process.env.TASK_REMINDER_FILE_PATH || "src/db/taskreminder.json"
+// =====================================================
+// CONSTANTS
+// =====================================================
 
+const TASK_STATUS_CACHE_KEY = "statuss_data";
+
+const ALLOWED_UPDATE_FIELDS = [
+  "title",
+  "des",
+  "type_id",
+  "category_id",
+  "schedule",
+  "statuses_id",
+  "rate",
+  "status",
+];
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 100;
+
+// =====================================================
+// HELPERS
+// =====================================================
 
 const formatBackendDate = (dateInput) => {
-  if (!dateInput) return '-';
-  const d = new Date(dateInput);
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }); 
+  if (!dateInput) return "-";
+
+  const date = new Date(dateInput);
+
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 };
 
-// Helper Function 
-const validateEntity = async (filePath,key, id, entityName, userId, checkOwner = true) => {
-  if (!id) return null;
-  // const list = await readJsonFile(filePath, []);
-  const list = await getOrSetCache(key, () => readJsonFile(filePath, []));
+const isValidUserId = (userId) => {
+  return (
+    userId !== undefined &&
+    userId !== null &&
+    Number.isFinite(Number(userId)) &&
+    Number(userId) > 0
+  );
+};
 
-  const item = list.find((record) => Number(record.id) === Number(id));
+const getTaskCacheKey = (userId) => `tasks_${userId}`;
+
+// Always load the authenticated user's own task file.
+const getUserTasks = async (userId) => {
+  const userFiles = getUserFilePaths(userId);
+  const cacheKey = getTaskCacheKey(userId);
+
+  const cachedTasks = await getOrSetCache(
+    cacheKey,
+    () => readJsonFile(userFiles.tasks, [])
+  );
+
+  return {
+    userFiles,
+    cacheKey,
+    tasks: Array.isArray(cachedTasks)
+      ? cachedTasks.map((task) => ({ ...task }))
+      : [],
+  };
+};
+
+// Never clear cache before the file write succeeds.
+const saveUserTasks = async (
+  userFiles,
+  cacheKey,
+  tasks,
+  message
+) => {
+  await writeJsonFile(userFiles.tasks, tasks, message);
+  clearCache(cacheKey);
+};
+
+const getAuthenticatedUserId = (req, res) => {
+  const userId = req.user?.id;
+
+  if (!isValidUserId(userId)) {
+    res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+
+    return null;
+  }
+
+  return userId;
+};
+
+// =====================================================
+// ENTITY VALIDATION
+// =====================================================
+
+const validateEntity = async (
+  filePath,
+  cacheKey,
+  id,
+  entityName
+) => {
+  if (
+    id === undefined ||
+    id === null ||
+    id === "" ||
+    !Number.isFinite(Number(id)) ||
+    Number(id) <= 0
+  ) {
+    return `សូមជ្រើសរើស${entityName}ឱ្យបានត្រឹមត្រូវ`;
+  }
+
+  const list = await getOrSetCache(
+    cacheKey,
+    () => readJsonFile(filePath, [])
+  );
+
+  if (!Array.isArray(list)) {
+    return `មិនអាចអានទិន្នន័យ${entityName}បានទេ`;
+  }
+
+  const item = list.find(
+    (record) => Number(record.id) === Number(id)
+  );
+
   if (!item) {
     return `${entityName} ដែលអ្នកជ្រើសរើសមិនមានក្នុងប្រព័ន្ធឡើយ`;
   }
-  if (checkOwner && item.user_id && Number(item.user_id) !== Number(userId)) {
-    return `អ្នកគ្មានសិទ្ធិប្រើប្រាស់ ${entityName} នេះឡើយ`;
-  }
+
   return null;
 };
 
-
-//validate data
 const validateTaskEntities = async (taskData, userId) => {
   const userFiles = getUserFilePaths(userId);
 
@@ -52,36 +160,19 @@ const validateTaskEntities = async (taskData, userId) => {
       key: `taskTypes_${userId}`,
       id: taskData.type_id,
       name: "ប្រភេទភារកិច្ច",
-      checkOwner: false,
     },
     {
       path: userFiles.categories,
       key: `categories_${userId}`,
       id: taskData.category_id,
       name: "ការបែងចែកការងារ",
-      checkOwner: false,
     },
-    // {
-    //   path: userFiles.telegram,
-    //   key: `telegram_${userId}`,
-    //   id: taskData.telegram_id,
-    //   name: "គណនី Telegram",
-    //   checkOwner: false,
-    // },
     {
-      path: TASKStATUS_FILE_PATH,
-      key: "statuss_data",
+      path: TASK_STATUS_FILE_PATH,
+      key: TASK_STATUS_CACHE_KEY,
       id: taskData.statuses_id,
       name: "ស្ថានភាព",
-      checkOwner: false,
     },
-    // {
-    //   path: TASK_REMINDER_FILE_PATH,
-    //   key: "reminders_data",
-    //   id: taskData.reminder_id,
-    //   name: "ការរំលឹក",
-    //   checkOwner: false,
-    // },
   ];
 
   for (const check of checks) {
@@ -89,9 +180,7 @@ const validateTaskEntities = async (taskData, userId) => {
       check.path,
       check.key,
       check.id,
-      check.name,
-      userId,
-      check.checkOwner
+      check.name
     );
 
     if (error) return error;
@@ -100,13 +189,18 @@ const validateTaskEntities = async (taskData, userId) => {
   return null;
 };
 
+// =====================================================
+// CREATE TASK
+// =====================================================
 
 exports.createTask = async (req, res) => {
   try {
-    const taskData = req.body || {};
-    const currentUserId = req.user?.id;
+    const currentUserId = getAuthenticatedUserId(req, res);
+    if (!currentUserId) return;
 
-    // Define Map 
+    const taskData = req.body || {};
+
+    // Validate referenced records.
     const validationError = await validateTaskEntities(
       taskData,
       currentUserId
@@ -119,261 +213,53 @@ exports.createTask = async (req, res) => {
       });
     }
 
+    const {
+      userFiles,
+      cacheKey,
+      tasks,
+    } = await getUserTasks(currentUserId);
 
-    // const taskList = await readJsonFile(TASK_FILE_PATH, []);
-    // let taskList = await getOrSetCache("tasks_data", () => readJsonFile(TASK_FILE_PATH, []));
-    if (!currentUserId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
+    // Prevent ID collision with existing records.
+    let newId = Date.now();
+
+    while (tasks.some((task) => Number(task.id) === newId)) {
+      newId += 1;
     }
 
-    const userFiles = getUserFilePaths(currentUserId);
-    const taskCacheKey = `tasks_${currentUserId}`;
-
-    let taskList = await getOrSetCache(
-      taskCacheKey,
-      () => readJsonFile(userFiles.tasks, [])
-    );
-
-    const { 
-      type_id,
-      category_id,
-      schedule,
-      statuses_id,
-      // reminder_id,
-      // telegram_id,
-      title, 
-      des, 
-      rate
-    } = taskData;
+    const now = new Date();
 
     const newTask = new Task({
-      id: Date.now(),
-      status: true,
-      user_id: req.user?.id || null,
-      type_id: type_id,
-      category_id: category_id,
-      schedule: schedule,
-      statuses_id: statuses_id,
-      // reminder_id: reminder_id,
-      // telegram_id: telegram_id, 
-      title: title,
-      des: des || '',
-      rate: rate || 0,
-      created_at: new Date(),
-      updated_at: new Date()
+      id: newId,
+      status: taskData.status ?? true,
+      user_id: currentUserId,
+      type_id: Number(taskData.type_id),
+      category_id: Number(taskData.category_id),
+      schedule: taskData.schedule,
+      statuses_id: Number(taskData.statuses_id),
+      title: taskData.title,
+      des: taskData.des ?? "",
+      rate: taskData.rate ?? 0,
+      created_at: now,
+      updated_at: now,
     });
 
-    taskList.push(newTask);
-    
-    await writeJsonFile(
-      userFiles.tasks,
-      taskList,
-      `Task created: ${title || "New Task"}`
+    tasks.push(newTask);
+
+    await saveUserTasks(
+      userFiles,
+      cacheKey,
+      tasks,
+      `Task created: ${newTask.title}`
     );
 
-
-    clearCache(taskCacheKey);
-
-    return res.status(201).json({ 
+    return res.status(201).json({
       success: true,
-      message: "បង្កើត Task បានជោគជ័យ", 
-      data: newTask 
+      message: "បង្កើត Task បានជោគជ័យ",
+      data: newTask,
     });
 
   } catch (err) {
-    console.error("CREATE_TASK_TYPE_ERROR:", err);
-    return res.status(500).json({ 
-      success: false,
-      message: "Server error", 
-      error: err.message 
-    });
-  }
-};
-
-exports.updateTask = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const taskData = req.body || {};
-    
-    const currentUserId = req.user?.id;
-
-    // const taskList = await readJsonFile(TASK_FILE_PATH, []);
-    // let taskList = await getOrSetCache("tasks_data", () => readJsonFile(TASK_FILE_PATH, []));
-    const userFiles = getUserFilePaths(currentUserId);
-    const taskCacheKey = `tasks_${currentUserId}`;
-
-    let taskList = await getOrSetCache(
-      taskCacheKey,
-      () => readJsonFile(userFiles.tasks, [])
-    );
-
-    const taskIndex = taskList.findIndex(s => String(s.id) === String(id));
-
-    if (taskIndex === -1) {
-      return res.status(404).json({ success: false, message: "រកមិនឃើញ Task ដែលត្រូវកែប្រែឡើយ!" });
-    }
-    const oldTask = taskList[taskIndex];
-    // =========================
-    // CHECK DATA OWNERSHIP
-    // =========================
-    const isOwner = String(oldTask.user_id) === String(currentUserId);
-
-    if (!isOwner) {
-      return res.status(403).json({
-        success: false,
-        message: "អ្នកមិនមានសិទ្ធិកែប្រែ Task category នេះទេ!",
-      });
-    }
-
-    // Define Map 
-    const validationError = await validateTaskEntities(
-      taskData,
-      currentUserId
-    );
-
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-    
-
-    const updatedTask = {
-      ...oldTask,      
-      ...taskData,        
-      updated_at: new Date()
-    };
-
-    taskList[taskIndex] = updatedTask;
-    // await writeJsonFile(TASK_FILE_PATH, taskList, `Task Types: updated ${updatedTask.title || id}`);
-
-    // clearCache('tasks_data')
-    await writeJsonFile(
-      userFiles.tasks,
-      taskList,
-      `Task updated: ${updatedTask.title || id}`
-    );
-
-    clearCache(taskCacheKey);
-
-    return res.status(200).json({
-      success: true,
-      message: "ធ្វើបច្ចុប្បន្នភាព Task បានជោគជ័យ",
-      data: updatedTask
-    });
-
-  } catch (err) {
-    console.error("UPDATE_TASK_TYPE_ERROR:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: err.message
-    });
-  }
-};
-
-exports.deleteTask = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const currentUserId = req.user?.id;
-
-    // =========================
-    // CHECK AUTHENTICATION
-    // =========================
-
-    if (!currentUserId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-
-    // =========================
-    // READ DATA
-    // =========================
-
-    // const taskList = await readJsonFile(TASK_FILE_PATH,[]);
-    // let taskList = await getOrSetCache("tasks_data", () => readJsonFile(TASK_FILE_PATH, []));
-    const userFiles = getUserFilePaths(currentUserId);
-    const taskCacheKey = `tasks_${currentUserId}`;
-
-    let taskList = await getOrSetCache(
-      taskCacheKey,
-      () => readJsonFile(userFiles.tasks, [])
-    );
-
-    // =========================
-    // FIND TASK TYPE
-    // =========================
-
-    const taskToDelete = taskList.find(
-      (item) => String(item.id) === String(id)
-    );
-
-    if (!taskToDelete) {
-      return res.status(404).json({
-        success: false,
-        message: "រកមិនឃើញ Task ដែលត្រូវលុបឡើយ!",
-      });
-    }
-
-    // =========================
-    // CHECK DATA OWNERSHIP
-    // =========================
-
-    const isOwner =
-      String(taskToDelete.user_id) ===
-      String(currentUserId);
-
-    if (!isOwner) {
-      return res.status(403).json({
-        success: false,
-        message: "អ្នកមិនមានសិទ្ធិលុប Task នេះទេ!",
-      });
-    }
-
-    // =========================
-    // REMOVE DATA
-    // =========================
-
-    const filteredTasks = taskList.filter(
-      (item) => String(item.id) !== String(id)
-    );
-
-    // =========================
-    // SAVE DATA
-    // =========================
-
-    // await writeJsonFile(
-    //   TASK_FILE_PATH,
-    //   filteredTasks,
-    //   `Task Type: deleted task with ID ${id}`
-    // );
-
-    // clearCache('tasks_data');
-    await writeJsonFile(
-      userFiles.tasks,
-      filteredTasks,
-      `Task deleted: ${id}`
-    );
-
-    clearCache(taskCacheKey);
-
-    // =========================
-    // RESPONSE
-    // =========================
-
-    return res.status(200).json({
-      success: true,
-      message: "លុប Task បានជោគជ័យ",
-    });
-
-  } catch (err) {
-    console.error("DELETE_TASK_TYPE_ERROR:", err);
+    console.error("CREATE_TASK_ERROR:", err);
 
     return res.status(500).json({
       success: false,
@@ -383,158 +269,365 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
-const shuffleArray = (array) => {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-};
+// =====================================================
+// UPDATE TASK
+// =====================================================
 
-exports.getAllTasks = async (req, res) => {
+exports.updateTask = async (req, res) => {
   try {
-    const currentUserId = req.user?.id;
-    const currentUserRole = Number(req.user?.role);
+    const currentUserId = getAuthenticatedUserId(req, res);
+    if (!currentUserId) return;
 
-    if (!currentUserId) {
-      return res.status(401).json({
+    const { id } = req.params;
+    const taskData = req.body || {};
+
+    const {
+      userFiles,
+      cacheKey,
+      tasks,
+    } = await getUserTasks(currentUserId);
+
+    const taskIndex = tasks.findIndex(
+      (task) => String(task.id) === String(id)
+    );
+
+    if (taskIndex === -1) {
+      return res.status(404).json({
         success: false,
-        message: "Unauthorized",
+        message: "រកមិនឃើញ Task ដែលត្រូវកែប្រែឡើយ!",
       });
     }
 
-    // let tasks = await readJsonFile(TASK_FILE_PATH, []);
-    // let tasks = await getOrSetCache("tasks_data", () => readJsonFile(TASK_FILE_PATH, []));
-    const userFiles = getUserFilePaths(currentUserId);
-    const taskCacheKey = `tasks_${currentUserId}`;
+    const oldTask = tasks[taskIndex];
 
-    let tasks = await getOrSetCache(
-      taskCacheKey,
-      () => readJsonFile(userFiles.tasks, [])
-    );
-
-    // // Super Admin
-    // if (currentUserRole === 1) {
-      
-    // }
-    // else {
-    //  tasks  = tasks.filter(
-    //     (item) =>
-    //       String(item.user_id) === String(currentUserId)
-    //   );
-    // }
-
-    const { search, page, limit, random, user_id } = req.query;
-
-    if (user_id) {
-      tasks = tasks.filter(s => String(s.user_id) === String(user_id));
+    // Verify ownership.
+    if (String(oldTask.user_id) !== String(currentUserId)) {
+      return res.status(403).json({
+        success: false,
+        message: "អ្នកមិនមានសិទ្ធិកែប្រែ Task នេះទេ!",
+      });
     }
 
-    if (search) {
-      const searchLower = search.toLowerCase();
-      tasks = tasks.filter(s => 
-        (s.title && s.title.toLowerCase().includes(searchLower)) ||
-        (s.title_kh && s.title_kh.toLowerCase().includes(searchLower)) ||
-        (s.des && s.des.toLowerCase().includes(searchLower)) ||
-        (s.description && s.description.toLowerCase().includes(searchLower))
+    // Validate referenced records.
+    const validationError = await validateTaskEntities(
+      taskData,
+      currentUserId
+    );
+
+    if (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError,
+      });
+    }
+
+    // Only accept explicitly allowed fields.
+    const safeUpdates = {};
+
+    for (const field of ALLOWED_UPDATE_FIELDS) {
+      if (
+        Object.prototype.hasOwnProperty.call(taskData, field)
+      ) {
+        safeUpdates[field] = taskData[field];
+      }
+    }
+
+    // Normalize numeric fields.
+    if (safeUpdates.type_id !== undefined) {
+      safeUpdates.type_id = Number(safeUpdates.type_id);
+    }
+
+    if (safeUpdates.category_id !== undefined) {
+      safeUpdates.category_id = Number(safeUpdates.category_id);
+    }
+
+    if (safeUpdates.statuses_id !== undefined) {
+      safeUpdates.statuses_id = Number(safeUpdates.statuses_id);
+    }
+
+    if (safeUpdates.rate !== undefined) {
+      safeUpdates.rate = Number(safeUpdates.rate);
+    }
+
+    const updatedTask = {
+      ...oldTask,
+      ...safeUpdates,
+      id: oldTask.id,
+      user_id: oldTask.user_id,
+      created_at: oldTask.created_at,
+
+      updated_at: new Date(),
+    };
+
+    tasks[taskIndex] = updatedTask;
+
+    await saveUserTasks(
+      userFiles,
+      cacheKey,
+      tasks,
+      `Task updated: ${updatedTask.title}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "ធ្វើបច្ចុប្បន្នភាព Task បានជោគជ័យ",
+      data: updatedTask,
+    });
+
+  } catch (err) {
+    console.error("UPDATE_TASK_ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+// =====================================================
+// DELETE TASK
+// =====================================================
+
+exports.deleteTask = async (req, res) => {
+  try {
+    const currentUserId = getAuthenticatedUserId(req, res);
+    if (!currentUserId) return;
+
+    const { id } = req.params;
+
+    const {
+      userFiles,
+      cacheKey,
+      tasks,
+    } = await getUserTasks(currentUserId);
+
+    const taskIndex = tasks.findIndex(
+      (task) => String(task.id) === String(id)
+    );
+
+    if (taskIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "រកមិនឃើញ Task ដែលត្រូវលុបឡើយ!",
+      });
+    }
+
+    const taskToDelete = tasks[taskIndex];
+
+    if (String(taskToDelete.user_id) !== String(currentUserId)) {
+      return res.status(403).json({
+        success: false,
+        message: "អ្នកមិនមានសិទ្ធិលុប Task នេះទេ!",
+      });
+    }
+
+    const filteredTasks = tasks.filter(
+      (task) => String(task.id) !== String(id)
+    );
+
+    await saveUserTasks(
+      userFiles,
+      cacheKey,
+      filteredTasks,
+      `Task deleted: ${id}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "លុប Task បានជោគជ័យ",
+    });
+
+  } catch (err) {
+    console.error("DELETE_TASK_ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+// =====================================================
+// SHUFFLE ARRAY
+// =====================================================
+
+const shuffleArray = (array) => {
+  const result = [...array];
+
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+};
+
+// =====================================================
+// GET ALL TASKS
+// =====================================================
+
+exports.getAllTasks = async (req, res) => {
+  try {
+    const currentUserId = getAuthenticatedUserId(req, res);
+    if (!currentUserId) return;
+
+    const { tasks: cachedTasks } = await getUserTasks(currentUserId);
+
+    // getUserTasks already returns a copy.
+    let tasks = cachedTasks;
+
+    const {
+      search,
+      page,
+      limit,
+      random,
+    } = req.query;
+
+    // Search safely.
+    if (typeof search === "string" && search.trim()) {
+      const searchLower = search.trim().toLowerCase();
+
+      tasks = tasks.filter((task) => {
+        const title = String(task.title ?? "").toLowerCase();
+        const des = String(task.des ?? "").toLowerCase();
+
+        return (
+          title.includes(searchLower) ||
+          des.includes(searchLower)
+        );
+      });
+    }
+
+    // Sort or shuffle without modifying cache.
+    if (random === "true") {
+      tasks = shuffleArray(tasks);
+    } else {
+      tasks.sort(
+        (a, b) =>
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
       );
     }
 
-    if (random === 'true') {
-      tasks = shuffleArray(tasks);
-    } else {
-      tasks.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    }
+    const totalItems = tasks.length;
 
-    const formattedTasks = tasks.map(s => ({
-      ...s,
-      created_at: s.created_at,
-      updated_at: s.updated_at,
-      created:  formatBackendDate(s.created_at)
+    const formattedTasks = tasks.map((task) => ({
+      ...task,
+      created_at: task.created_at,
+      updated_at: task.updated_at,
+      created: formatBackendDate(task.created_at),
     }));
 
-    const totalItems = formattedTasks.length;
+    // Pagination.
+    if (page !== undefined || limit !== undefined) {
+      const requestedPage = Number(page ?? DEFAULT_PAGE);
+      const requestedLimit = Number(limit ?? DEFAULT_LIMIT);
 
-    if (page || limit) {
-      const currentPage = parseInt(page) || 1;
-      const pageSize = parseInt(limit) || 10;
+      if (
+        !Number.isInteger(requestedPage) ||
+        requestedPage < 1 ||
+        !Number.isInteger(requestedLimit) ||
+        requestedLimit < 1
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid pagination parameters",
+        });
+      }
+
+      const pageSize = Math.min(requestedLimit, MAX_LIMIT);
+      const totalPages = Math.ceil(totalItems / pageSize);
+
+      const currentPage = totalPages === 0
+        ? 1
+        : Math.min(requestedPage, totalPages);
+
       const startIndex = (currentPage - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
 
-      const paginatedData = formattedTasks.slice(startIndex, endIndex);
+      const paginatedData = formattedTasks.slice(
+        startIndex,
+        startIndex + pageSize
+      );
 
-      return res.json({
+      return res.status(200).json({
         success: true,
         meta: {
           total_items: totalItems,
           current_page: currentPage,
           limit: pageSize,
-          total_pages: Math.ceil(totalItems / pageSize)
+          total_pages: totalPages,
         },
-        data: paginatedData
+        data: paginatedData,
       });
     }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       total: totalItems,
-      data: formattedTasks
+      data: formattedTasks,
     });
 
   } catch (err) {
-    console.error("GET_ALL_TASK_TYPES_ERROR:", err);
+    console.error("GET_ALL_TASKS_ERROR:", err);
+
     return res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 };
 
+// =====================================================
+// GET TASK BY ID
+// =====================================================
+
 exports.getTaskById = async (req, res) => {
   try {
-    const currentUserId = req.user?.id;
-
-    if (!currentUserId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
+    const currentUserId = getAuthenticatedUserId(req, res);
+    if (!currentUserId) return;
 
     const { id } = req.params;
-    // const tasks = await readJsonFile(TASK_FILE_PATH, []);
-    // let tasks = await getOrSetCache("tasks_data", () => readJsonFile(TASK_FILE_PATH, []));
-    // const task = tasks.find((s) => String(s.id) === String(id) &&  String(s.user_id) === String(currentUserId));
-    
-    const userFiles = getUserFilePaths(currentUserId);
-    const taskCacheKey = `tasks_${currentUserId}`;
-    let tasks = await getOrSetCache(
-      taskCacheKey,
-      () => readJsonFile(userFiles.tasks, [])
-    );
+
+    const { tasks } = await getUserTasks(currentUserId);
 
     const task = tasks.find(
-      (s) => String(s.id) === String(id)
+      (item) => String(item.id) === String(id)
     );
 
     if (!task) {
-      return res.status(404).json({ success: false, message: "រកមិនឃើញ task types នេះឡើយ" });
+      return res.status(404).json({
+        success: false,
+        message: "រកមិនឃើញ Task នេះឡើយ",
+      });
     }
 
-    const formattedTask = {
-      ...task,
-      created_at: formatBackendDate(task.created_at),
-      updated_at: formatBackendDate(task.updated_at)
-    };
+    // Defense in depth: verify ownership.
+    if (String(task.user_id) !== String(currentUserId)) {
+      return res.status(403).json({
+        success: false,
+        message: "អ្នកមិនមានសិទ្ធិមើល Task នេះទេ",
+      });
+    }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      data: formattedTask
+      data: {
+        ...task,
+        created_at: formatBackendDate(task.created_at),
+        updated_at: formatBackendDate(task.updated_at),
+      },
     });
-    
+
   } catch (err) {
-    console.error("GET_TASK_TYPE_BY_ID_ERROR:", err);
-    return res.status(500).json({ success: false, message: "Server error", error: err.message });
+    console.error("GET_TASK_BY_ID_ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
   }
 };

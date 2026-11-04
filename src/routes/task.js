@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const taskController = require("../controllers/taskController");
 const authMiddleware = require("../middlewares/authMiddleware");
-const { validateTask } = require("../validators/taskValidator.js");
+const { validateCreateTask, validateUpdateTask } = require("../validators/taskValidator.js");
 
 const permission = require("../middlewares/permissionMiddleware");
 
@@ -25,7 +25,7 @@ router.post("/",
   authMiddleware, 
   permission("tasks.create"),
   uploadMiddleware.none(),
-  validateTask, 
+  validateCreateTask, 
   taskController.createTask
 );
 
@@ -33,7 +33,7 @@ router.put("/:id",
   authMiddleware, 
   permission("tasks.update"), 
   uploadMiddleware.none(), 
-  validateTask, 
+  validateUpdateTask, 
   taskController.updateTask
 );
 
