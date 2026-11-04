@@ -65,6 +65,31 @@ const toDateKey = (value) => {
   return getDateKey(date);
 };
 
+// Format date in Khmer and English
+const getFormattedDates = (dateKey) => {
+  const date = new Date(`${dateKey}T12:00:00.000Z`);
+
+  const khmerDate = new Intl.DateTimeFormat("km-KH", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(date);
+
+  const englishDate = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(date);
+
+  return {
+    khmerDate,
+    englishDate
+  };
+};
+
 // =========================
 // TELEGRAM HELPERS
 // =========================
@@ -120,14 +145,26 @@ const isActiveTask = (task) => {
   );
 };
 
-const getTaskLines = (tasks) => {
+const getTaskLines = (
+  tasks,
+  emptyText = "មិនមានការងារទេ!"
+) => {
   if (!tasks.length) {
-    return "   - None";
+    return `(${emptyText})`;
   }
 
   return tasks.map((task, index) => {
     return `${index + 1}. ${escapeHtml(task.title || "Untitled")}`;
   }).join("\n");
+};
+
+const getUserFullName = (user) => {
+  const firstName = user.firstName || "";
+  const lastName = user.lastName || "";
+
+  return escapeHtml(
+    `${firstName} ${lastName}`.trim() || user.username || "User"
+  );
 };
 
 // =========================
@@ -158,37 +195,59 @@ const loadUserTasks = async (userId) => {
 // MORNING MESSAGE
 // =========================
 
-const buildMorningMessage = (tasks, today) => {
-  const todayTasks = tasks.filter(
+const buildMorningMessage = (tasks, today, user) => {
+
+  // Only active tasks with valid schedule dates
+  const activeTasks = tasks.filter(
     (task) =>
-      toDateKey(task.schedule) === today &&
-      isActiveTask(task)
+      isActiveTask(task) &&
+      toDateKey(task.schedule) !== null
   );
 
-  const notStarted = todayTasks.filter(
+  // Overdue tasks: schedule before today
+  const overdueTasks = activeTasks.filter(
     (task) =>
-      Number(task.statuses_id) === DEFAULT_STATUS_ID
+      toDateKey(task.schedule) < today
   );
 
-  const inProgress = todayTasks.filter(
+  // Today's tasks: schedule equals today
+  const todayTasks = activeTasks.filter(
     (task) =>
-      Number(task.statuses_id) === IN_PROGRESS_STATUS_ID
+      toDateKey(task.schedule) === today
   );
+
+  const totalTasks =
+    overdueTasks.length + todayTasks.length;
+
+  const { khmerDate, englishDate } =
+    getFormattedDates(today);
+
+  const fullName = getUserFullName(user);
 
   return [
-    "🌅 <b>Good Morning!</b>",
+    `🌅 <b>អរុណសួស្ដី ${fullName}!</b>`,
+    `${khmerDate}`,
+    `${englishDate}`,
     "",
-    `📅 Date: ${today}`,
+    "⚠️ <b>ភារកិច្ចហួសកាលកំណត់</b>",
+    getTaskLines(
+      overdueTasks,
+      "មិនមានភារកិច្ចហួសកាលកំណត់ទេ!"
+    ),
     "",
-    `📝 <b>Today's Tasks (${todayTasks.length})</b>`,
+    `📝 <b>ភារកិច្ចត្រូវធ្វើថ្ងៃនេះ (${todayTasks.length})</b>`,
+    getTaskLines(
+      todayTasks,
+      "មិនមានការងារដែលបានកំណត់សម្រាប់ធ្វើក្នុងថ្ងៃនេះទេ!"
+    ),
     "",
-    `🔵 <b>Not Started (${notStarted.length})</b>`,
-    getTaskLines(notStarted),
+    "📊 <b>សរុបការងារ</b>",
+    `- ហួសកំណត់៖ ${overdueTasks.length}`,
+    `- ត្រូវធ្វើថ្ងៃនេះ៖ ${todayTasks.length}`,
+    `- <b>សរុប៖ ${totalTasks}</b>`,
     "",
-    `🟡 <b>In Progress (${inProgress.length})</b>`,
-    getTaskLines(inProgress),
-    "",
-    "Have a productive day! 💪"
+    "សូមពិនិត្យការងារហួសកំណត់ និងរៀបចំអាទិភាពការងារថ្ងៃនេះ។",
+    "សូមឱ្យថ្ងៃនេះជាថ្ងៃប្រកបដោយផលិតភាព! 💪"
   ].join("\n");
 };
 
@@ -196,13 +255,15 @@ const buildMorningMessage = (tasks, today) => {
 // EVENING MESSAGE
 // =========================
 
-const buildEveningMessage = (tasks, today, tomorrow) => {
+const buildEveningMessage = (tasks, today, tomorrow, user) => {
+  // Tasks completed today
   const completed = tasks.filter(
     (task) =>
       Number(task.statuses_id) === COMPLETED_STATUS_ID &&
       toDateKey(task.updated_at) === today
   );
 
+  // Tasks scheduled for today and not completed
   const todayActiveTasks = tasks.filter(
     (task) =>
       toDateKey(task.schedule) === today &&
@@ -219,32 +280,53 @@ const buildEveningMessage = (tasks, today, tomorrow) => {
       Number(task.statuses_id) === IN_PROGRESS_STATUS_ID
   );
 
+  // Tasks scheduled for tomorrow
   const tomorrowTasks = tasks.filter(
     (task) =>
       toDateKey(task.schedule) === tomorrow &&
       isActiveTask(task)
   );
 
+  // Date and user information
+  const { khmerDate, englishDate } =
+    getFormattedDates(today);
+
+  const fullName = getUserFullName(user);
+
   return [
-    "🌇 <b>Daily Work Summary</b>",
+    `🌇 <b>សង្ខេបរបាយការណ៍ប្រចាំថ្ងៃ ${fullName} របស់អ្នក!</b>`,
+    khmerDate,
+    englishDate,
     "",
-    `📅 Date: ${today}`,
+    `✅ <b>ភារកិច្ចដែលបានបញ្ចប់ថ្ងៃនេះ (${completed.length})</b>`,
+    getTaskLines(
+      completed,
+      "មិនមានការងារណាមួយដែលបានបញ្ចប់នោះទេ!"
+    ),
     "",
-    `✅ <b>Completed (${completed.length})</b>`,
-    getTaskLines(completed),
+    `🔵 <b>ភារកិច្ចមិនទាន់បានចាប់ផ្ដើម (${notStarted.length})</b>`,
+    getTaskLines(
+      notStarted,
+      "មិនមានភារកិច្ចដែលមិនទាន់ចាប់ផ្ដើមទេ!"
+    ),
     "",
-    `🔵 <b>Not Started (${notStarted.length})</b>`,
-    getTaskLines(notStarted),
+    `🟡 <b>ភារកិច្ចកំពុងធ្វើ (${inProgress.length})</b>`,
+    getTaskLines(
+      inProgress,
+      "មិនមានភារកិច្ចកំពុងធ្វើទេ!"
+    ),
     "",
-    `🟡 <b>In Progress (${inProgress.length})</b>`,
-    getTaskLines(inProgress),
+    `📌 <b>ភារកិច្ចដែលអ្នកត្រូវធ្វើនៅថ្ងៃស្អែក (${tomorrowTasks.length})</b>`,
+    getTaskLines(
+      tomorrowTasks,
+      "មិនមានភារកិច្ចដែលបានកំណត់សម្រាប់ថ្ងៃស្អែកទេ!"
+    ),
     "",
-    `📌 <b>Tomorrow's Tasks (${tomorrowTasks.length})</b>`,
-    getTaskLines(tomorrowTasks),
-    "",
-    "Keep improving every day! 💪"
+    "សូមពិនិត្យលទ្ធផលការងារថ្ងៃនេះ និងត្រៀមខ្លួនសម្រាប់ថ្ងៃស្អែក។",
+    "បន្តកែលម្អជារៀងរាល់ថ្ងៃ! 💪"
   ].join("\n");
 };
+
 
 // =========================
 // SEND TO ALL USERS
@@ -274,7 +356,8 @@ const sendToAllUsers = async (messageBuilder, dateKeys) => {
 
       const message = messageBuilder(
         tasks,
-        ...dateKeys
+        ...dateKeys,
+        user
       );
 
       await sendTelegramMessage(chatId, message);

@@ -6,10 +6,9 @@ const {
 } = require("./src/services/taskNotificationService");
 
 async function test() {
-//   const result = await sendMorningReminders();
-//   console.log("Morning result:", result);
+  // const result = await sendMorningReminders();
+  // console.log("Morning result:", result);
 
-//   សាកល្បង Evening ដាច់ដោយឡែក
   const result = await sendEveningSummaries();
   console.log("Evening result:", result);
 }
