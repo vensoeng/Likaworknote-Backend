@@ -31,18 +31,18 @@ const createTaskSchema = Joi.object({
     "any.required": "សូមជ្រើសរើសស្ថានភាពភារកិច្ច",
   }),
   
-  reminder_id: Joi.number().integer().min(3).required().messages({
-    "number.base": "សូមជ្រើសរើសភារកិច្ច",
-    "number.integer": "សូមជ្រើសរើសភារកិច្ច",
-    "number.min": "សូមជ្រើសរើសភារកិច្ច",
-    "any.required": "សូមជ្រើសរើសភារកិច្ច",
-  }),
+  // reminder_id: Joi.number().integer().min(3).required().messages({
+  //   "number.base": "សូមជ្រើសរើសភារកិច្ច",
+  //   "number.integer": "សូមជ្រើសរើសភារកិច្ច",
+  //   "number.min": "សូមជ្រើសរើសភារកិច្ច",
+  //   "any.required": "សូមជ្រើសរើសភារកិច្ច",
+  // }),
   
-  telegram_id: Joi.number().integer().min(3).empty("").optional().messages({
-    "number.base": "សូមជ្រើសរើសគណនី Telegram",
-    "number.integer": "សូមជ្រើសរើសគណនី Telegram",
-    "number.min": "សូមជ្រើសរើសគណនី Telegram",
-  }),
+  // telegram_id: Joi.number().integer().min(3).empty("").optional().messages({
+  //   "number.base": "សូមជ្រើសរើសគណនី Telegram",
+  //   "number.integer": "សូមជ្រើសរើសគណនី Telegram",
+  //   "number.min": "សូមជ្រើសរើសគណនី Telegram",
+  // }),
   
   title: Joi.string().trim().min(1).max(150).required().messages({
     "string.empty": "Title មិនអាចទទេបានទេ",

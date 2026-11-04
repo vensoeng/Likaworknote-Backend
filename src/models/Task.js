@@ -7,8 +7,8 @@ class TaskCategory {
     category_id = null,
     schedule = null,
     statuses_id = null,
-    reminder_id = null,
-    telegram_id = null,
+    // reminder_id = null,
+    // telegram_id = null,
     title = "",
     des = "",
     rate = null,
@@ -22,8 +22,8 @@ class TaskCategory {
     this.category_id = category_id,
     this.schedule = schedule,
     this.statuses_id = statuses_id,
-    this.reminder_id = reminder_id,
-    this.telegram_id = telegram_id,
+    // this.reminder_id = reminder_id,
+    // this.telegram_id = telegram_id,
     this.title = title;
     this.des = des;
     this.rate = rate,

@@ -765,7 +765,7 @@ const loadSharedData = async () => {
   const [
     taskSchedules,
     taskStatuses,
-    taskReminders
+    // taskReminders
   ] = await Promise.all([
     getOrSetCache("schedule_data", () =>
       readJsonFile(TASKSCHEDULE_FILE_PATH, [])
@@ -775,15 +775,15 @@ const loadSharedData = async () => {
       readJsonFile(TASKSTATUS_FILE_PATH, [])
     ),
 
-    getOrSetCache("reminders_data", () =>
-      readJsonFile(TASK_REMINDER_FILE_PATH, [])
-    )
+    // getOrSetCache("reminders_data", () =>
+    //   readJsonFile(TASK_REMINDER_FILE_PATH, [])
+    // )
   ]);
 
   return {
     schedule: toMap(taskSchedules),
     status: toMap(taskStatuses),
-    reminder: toMap(taskReminders)
+    // reminder: toMap(taskReminders)
   };
 };
 
@@ -798,7 +798,7 @@ const loadUserData = async (userId) => {
     tasks,
     taskTypes,
     taskCategories,
-    telegrams,
+    // telegrams,
     shared
   ] = await Promise.all([
     getOrSetCache(`tasks_${userId}`, () =>
@@ -813,9 +813,9 @@ const loadUserData = async (userId) => {
       readJsonFile(userFiles.categories, [])
     ),
 
-    getOrSetCache(`telegrams_${userId}`, () =>
-      readJsonFile(userFiles.telegram, [])
-    ),
+    // getOrSetCache(`telegrams_${userId}`, () =>
+    //   readJsonFile(userFiles.telegram, [])
+    // ),
 
     loadSharedData()
   ]);
@@ -828,8 +828,8 @@ const loadUserData = async (userId) => {
       category: toMap(taskCategories),
       schedule: shared.schedule,
       status: shared.status,
-      reminder: shared.reminder,
-      telegram: toMap(telegrams)
+      // reminder: shared.reminder,
+      // telegram: toMap(telegrams)
     }
   };
 };
@@ -849,13 +849,13 @@ const formatTask = (task, maps) => {
     String(task.statuses_id)
   );
 
-  const reminder = maps.reminder.get(
-    String(task.reminder_id)
-  );
+  // const reminder = maps.reminder.get(
+  //   String(task.reminder_id)
+  // );
 
-  const telegram = maps.telegram.get(
-    String(task.telegram_id)
-  );
+  // const telegram = maps.telegram.get(
+  //   String(task.telegram_id)
+  // );
 
   return {
     ...task,
@@ -894,23 +894,23 @@ const formatTask = (task, maps) => {
         }
       : null,
 
-    reminder: reminder
-      ? {
-          id: reminder.id,
-          title: reminder.title,
-          des: reminder.des,
-          value: reminder.value
-        }
-      : null,
+    // reminder: reminder
+    //   ? {
+    //       id: reminder.id,
+    //       title: reminder.title,
+    //       des: reminder.des,
+    //       value: reminder.value
+    //     }
+    //   : null,
 
-    telegram: telegram
-      ? {
-          id: telegram.id,
-          title: telegram.title,
-          des: telegram.des,
-          telegram_id: telegram.telegram_id
-        }
-      : null
+    // telegram: telegram
+    //   ? {
+    //       id: telegram.id,
+    //       title: telegram.title,
+    //       des: telegram.des,
+    //       telegram_id: telegram.telegram_id
+    //     }
+    //   : null
   };
 };
 

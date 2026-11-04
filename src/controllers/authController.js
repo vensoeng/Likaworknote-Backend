@@ -207,7 +207,7 @@ exports.register = async (req, res) => {
       password: hash,
       role: 2,
       opt: null,
-      telgram_id: null,
+      telegram_id: null,
     });
 
     // Generate tokens
@@ -361,7 +361,10 @@ exports.login = async (req, res) => {
         bio: user.bio,
         gender: user.gender,
         birthday: user.birthday,
-        role: user.role
+        role: user.role,
+        telegram_id: user.telegram_id,
+        created_at: user.created_at,
+        updated_at: user.updated_at
       }
     });
 
@@ -417,7 +420,9 @@ exports.me = async (req, res) => {
       gender: user.gender || "",
       birthday: user.birthday || "",
       role: user.role,
-      telgram_id: user.telgram_id || null,
+      telegram_id: user.telegram_id || null,
+      created_at: user.created_at || null,
+      updated_at: user.updated_at || null,
     };
 
     return res.status(200).json({
@@ -488,7 +493,10 @@ exports.refreshToken = async (req, res) => {
         pr_img: user.pr_img,
         bio: user.bio,
         gender: user.gender,
-        birthday: user.birthday
+        birthday: user.birthday,
+        telegram_id: user.telegram_id,
+        created_at: user.created_at || null,
+        updated_at: user.updated_at || null,
       },
       SECRET,
       { expiresIn: "30m" }
@@ -545,7 +553,8 @@ exports.updateMe = async (req, res) => {
       firstName,
       lastName,
       username,
-      password
+      password,
+      telegram_id,
     } = userData;
 
     // Validate firstName
@@ -611,7 +620,25 @@ exports.updateMe = async (req, res) => {
 
       oldUser.password = await bcrypt.hash(password, 10);
     }
-
+    
+    // Validate Telegram ID
+    if (telegram_id !== undefined) {
+      if (
+        telegram_id !== null &&
+        telegram_id !== '' &&
+        (
+          typeof telegram_id !== 'string' ||
+          !/^-?\d+$/.test(telegram_id)
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Telegram ID មិនត្រឹមត្រូវទេ!"
+        });
+      }
+      oldUser.telegram_id = telegram_id || null;
+    }
+    
     // Save updated user
     users[userIndex] = oldUser;
 
@@ -635,7 +662,11 @@ exports.updateMe = async (req, res) => {
       gender: oldUser.gender,
       birthday: oldUser.birthday,
       role: oldUser.role,
-      telgram_id: oldUser.telgram_id,
+
+      telegram_id: oldUser.telegram_id,
+
+      created_at: oldUser.created_at || null,
+      updated_at: oldUser.updated_at || null,
     };
 
     return res.status(200).json({

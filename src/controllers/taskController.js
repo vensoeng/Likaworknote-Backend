@@ -11,7 +11,7 @@ const { getUserFilePaths } = require("../helper/userFileService");
 // const TELEGRAM_FILE_PATH = process.env.TELEGRAM_FILE_PATH || "src/db/telegram.json"
 // const TASKSCHEDULE_FILE_PATH = process.env.TASKSCHEDULE_FILE_PATH || "src/db/taskschedule.json"
 const TASKStATUS_FILE_PATH = process.env.TASKStATUS_FILE_PATH || "src/db/taskstatus.json"
-const TASK_REMINDER_FILE_PATH = process.env.TASK_REMINDER_FILE_PATH || "src/db/taskreminder.json"
+// const TASK_REMINDER_FILE_PATH = process.env.TASK_REMINDER_FILE_PATH || "src/db/taskreminder.json"
 
 
 const formatBackendDate = (dateInput) => {
@@ -61,13 +61,13 @@ const validateTaskEntities = async (taskData, userId) => {
       name: "ការបែងចែកការងារ",
       checkOwner: false,
     },
-    {
-      path: userFiles.telegram,
-      key: `telegram_${userId}`,
-      id: taskData.telegram_id,
-      name: "គណនី Telegram",
-      checkOwner: false,
-    },
+    // {
+    //   path: userFiles.telegram,
+    //   key: `telegram_${userId}`,
+    //   id: taskData.telegram_id,
+    //   name: "គណនី Telegram",
+    //   checkOwner: false,
+    // },
     {
       path: TASKStATUS_FILE_PATH,
       key: "statuss_data",
@@ -75,13 +75,13 @@ const validateTaskEntities = async (taskData, userId) => {
       name: "ស្ថានភាព",
       checkOwner: false,
     },
-    {
-      path: TASK_REMINDER_FILE_PATH,
-      key: "reminders_data",
-      id: taskData.reminder_id,
-      name: "ការរំលឹក",
-      checkOwner: false,
-    },
+    // {
+    //   path: TASK_REMINDER_FILE_PATH,
+    //   key: "reminders_data",
+    //   id: taskData.reminder_id,
+    //   name: "ការរំលឹក",
+    //   checkOwner: false,
+    // },
   ];
 
   for (const check of checks) {
@@ -142,8 +142,8 @@ exports.createTask = async (req, res) => {
       category_id,
       schedule,
       statuses_id,
-      reminder_id,
-      telegram_id,
+      // reminder_id,
+      // telegram_id,
       title, 
       des, 
       rate
@@ -157,8 +157,8 @@ exports.createTask = async (req, res) => {
       category_id: category_id,
       schedule: schedule,
       statuses_id: statuses_id,
-      reminder_id: reminder_id,
-      telegram_id: telegram_id, 
+      // reminder_id: reminder_id,
+      // telegram_id: telegram_id, 
       title: title,
       des: des || '',
       rate: rate || 0,

@@ -1,14 +1,35 @@
-
 const Joi = require("joi");
 
 const createUpdateMeSchema = Joi.object({
-  firstName: Joi.string().trim().min(1).max(100).optional(),
+  firstName: Joi.string()
+    .trim()
+    .min(1)
+    .max(100)
+    .optional(),
 
-  lastName: Joi.string().allow("").trim().max(100).optional(),
+  lastName: Joi.string()
+    .allow("")
+    .trim()
+    .max(100)
+    .optional(),
 
-  username: Joi.string().trim().min(3).max(50).optional(),
+  username: Joi.string()
+    .trim()
+    .min(3)
+    .max(50)
+    .optional(),
 
-  password: Joi.string().min(6).max(100).allow("").optional(),
+  password: Joi.string()
+    .min(6)
+    .max(100)
+    .allow("")
+    .optional(),
+
+  telegram_id: Joi.string()
+    .pattern(/^-?\d+$/)
+    .allow("")
+    .allow(null)
+    .optional(),
 
 }).min(1).unknown(false);
 
@@ -23,7 +44,6 @@ const validateUpdatedMe = (req, res, next) => {
 
     error.details.forEach(current => {
       const key = current.path[0];
-
       errorMessages[key] = current.message;
     });
 
