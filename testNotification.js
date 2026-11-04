@@ -1,0 +1,17 @@
+require("dotenv").config();
+
+const {
+  sendMorningReminders,
+  sendEveningSummaries
+} = require("./src/services/taskNotificationService");
+
+async function test() {
+//   const result = await sendMorningReminders();
+//   console.log("Morning result:", result);
+
+//   សាកល្បង Evening ដាច់ដោយឡែក
+  const result = await sendEveningSummaries();
+  console.log("Evening result:", result);
+}
+
+test().catch(console.error);

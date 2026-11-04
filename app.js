@@ -65,6 +65,9 @@ app.use("/mytask", require('./src/routes/taskToday'));
 //this is for test route
 // app.use("/test", require('./src/routes/test'));
 
+// for automation cron 
+app.use("/cron", require("./src/routes/cron"));
+
 app.get("/", (req, res) => {  
     res.send("Work note work!");
 });
