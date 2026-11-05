@@ -1,96 +1,86 @@
-const path = require("path");
 const TaskStatus = require("../models/TaskStatus");
-const { readJsonFile, writeJsonFile } = require("../utils/githubJsonStore");
-const {getOrSetCache, clearCache} = require("../helper/cacheService");
+const {
+  readJsonFile,
+  writeJsonFile
+} = require("../utils/githubJsonStore");
 
-const TASKSTATUS_FILE_PATH = process.env.TASKSTATUS_FILE_PATH || "src/db/taskStatus.json";
+const {
+  getOrSetCache,
+  clearCache
+} = require("../helper/cacheService");
 
-const formatBackendDate = (dateInput) => {
-  if (!dateInput) return '-';
-  const d = new Date(dateInput);
-  if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }); 
+const TASKSTATUS_FILE_PATH =
+  process.env.TASKSTATUS_FILE_PATH || "src/db/taskStatus.json";
+
+const CACHE_KEY = "statuss_data";
+const CACHE_TTL = 700;
+
+const getTaskStatusList = async () => {
+  const cached = await getOrSetCache(
+    CACHE_KEY,
+    () => readJsonFile(TASKSTATUS_FILE_PATH, []),
+    CACHE_TTL
+  );
+
+  return Array.isArray(cached) ? [...cached] : [];
 };
 
+const formatBackendDate = (dateInput) => {
+  if (!dateInput) return "-";
+
+  const date = new Date(dateInput);
+
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+};
+
+// CREATE
 exports.createTaskStatus = async (req, res) => {
   try {
-    const taskStatusData = req.body || {};
-    const { title, des, value } = taskStatusData;
+    const { title, des = "", value = "" } = req.body || {};
 
-    // const taskStatusList = await readJsonFile(TASKSTATUS_FILE_PATH, []);
-    let taskStatusList  = await getOrSetCache("statuss_data", () => readJsonFile(TASKSTATUS_FILE_PATH,[]), 1800);
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "សូមបញ្ចូលចំណងជើង Task Status"
+      });
+    }
+
+    const taskStatusList = await getTaskStatusList();
 
     const newTaskStatus = new TaskStatus({
       id: Date.now(),
-      user_id: req.user?.id || null,
-      title: title,
-      des: des,
-      value: value || "",
-      created_at: new Date(),
-      updated_at: new Date()
+      title: String(title).trim(),
+      des: String(des || ""),
+      value: String(value || ""),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     });
 
     taskStatusList.push(newTaskStatus);
-    
-    await writeJsonFile(TASKSTATUS_FILE_PATH, taskStatusList, `Task Status: created ${title || 'New Task Status demo'}`);
 
-    clearCache('statuss_data')
+    await writeJsonFile(
+      TASKSTATUS_FILE_PATH,
+      taskStatusList,
+      `Task Status: created ${newTaskStatus.title}`
+    );
 
-    return res.status(201).json({ 
+    clearCache(CACHE_KEY);
+
+    return res.status(201).json({
       success: true,
-      message: "បង្កើត Task Status បានជោគជ័យ", 
-      data: newTaskStatus 
+      message: "បង្កើត Task Status បានជោគជ័យ",
+      data: newTaskStatus
     });
 
   } catch (err) {
     console.error("CREATE_TASK_STATUS_ERROR:", err);
-    return res.status(500).json({ 
-      success: false,
-      message: "Server error", 
-      error: err.message 
-    });
-  }
-};
 
-exports.updateTaskStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const taskStatusData = req.body || {};
-
-    // const taskStatusList = await readJsonFile(TASKSTATUS_FILE_PATH, []);
-    let taskStatusList = await getOrSetCache("statuss_data", () => readJsonFile(TASKSTATUS_FILE_PATH,[]));
-
-    const taskStatusIndex = taskStatusList.findIndex(s => String(s.id) === String(id));
-
-    if (taskStatusIndex === -1) {
-      return res.status(404).json({ success: false, message: "រកមិនឃើញ Task Status ដែលត្រូវកែប្រែឡើយ!" });
-    }
-
-    const oldTaskStatus = taskStatusList[taskStatusIndex];
-
-    const updatedTaskStatus = {
-      ...oldTaskStatus,      
-      ...taskStatusData,        
-      updated_at: new Date()
-    };
-
-    taskStatusList[taskStatusIndex] = updatedTaskStatus;
-    await writeJsonFile(TASKSTATUS_FILE_PATH, taskStatusList, `Task Status: updated ${updatedTaskStatus.title || id}`);
-
-    clearCache('statuss_data')
-
-    return res.status(200).json({
-      success: true,
-      message: "ធ្វើបច្ចុប្បន្នភាព Task Status បានជោគជ័យ",
-      data: updatedTaskStatus
-    });
-
-  } catch (err) {
-    console.error("UPDATE_TASK_STATUS_ERROR:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -99,22 +89,107 @@ exports.updateTaskStatus = async (req, res) => {
   }
 };
 
+// UPDATE
+exports.updateTaskStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, des, value } = req.body || {};
+
+    const taskStatusList = await getTaskStatusList();
+
+    const index = taskStatusList.findIndex(
+      (status) => String(status.id) === String(id)
+    );
+
+    if (index === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "រកមិនឃើញ Task Status ដែលត្រូវកែប្រែឡើយ!"
+      });
+    }
+
+    if (
+      title !== undefined &&
+      !String(title).trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "ចំណងជើងមិនអាចទទេបានទេ"
+      });
+    }
+
+    const oldStatus = taskStatusList[index];
+
+    const updatedStatus = {
+      ...oldStatus,
+      ...(title !== undefined && {
+        title: String(title).trim()
+      }),
+      ...(des !== undefined && {
+        des: String(des)
+      }),
+      ...(value !== undefined && {
+        value: String(value)
+      }),
+      updated_at: new Date().toISOString()
+    };
+
+    taskStatusList[index] = updatedStatus;
+
+    await writeJsonFile(
+      TASKSTATUS_FILE_PATH,
+      taskStatusList,
+      `Task Status: updated ${updatedStatus.title}`
+    );
+
+    clearCache(CACHE_KEY);
+
+    return res.status(200).json({
+      success: true,
+      message: "ធ្វើបច្ចុប្បន្នភាព Task Status បានជោគជ័យ",
+      data: updatedStatus
+    });
+
+  } catch (err) {
+    console.error("UPDATE_TASK_STATUS_ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message
+    });
+  }
+};
+
+// DELETE
 exports.deleteTaskStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    // const taskStatusList = await readJsonFile(TASKSTATUS_FILE_PATH, []);
-    let taskStatusList  = await getOrSetCache("statuss_data", () => readJsonFile(TASKSTATUS_FILE_PATH,[]), 1800);
 
-    const taskStatusToDelete = taskStatusList.find(s => String(s.id) === String(id));
+    const taskStatusList = await getTaskStatusList();
 
-    if (!taskStatusToDelete) {
-      return res.status(404).json({ success: false, message: "រកមិនឃើញ Task Status ដែលត្រូវលុបឡើយ!" });
+    const exists = taskStatusList.some(
+      (status) => String(status.id) === String(id)
+    );
+
+    if (!exists) {
+      return res.status(404).json({
+        success: false,
+        message: "រកមិនឃើញ Task Status ដែលត្រូវលុបឡើយ!"
+      });
     }
 
-    const filteredTaskStatuss = taskStatusList.filter(s => String(s.id) !== String(id));
-    await writeJsonFile(TASKSTATUS_FILE_PATH, filteredTaskStatuss, `Task Status: deleted task type with ID ${id}`);
+    const filteredStatuses = taskStatusList.filter(
+      (status) => String(status.id) !== String(id)
+    );
 
-    clearCache('statuss_data')
+    await writeJsonFile(
+      TASKSTATUS_FILE_PATH,
+      filteredStatuses,
+      `Task Status: deleted status with ID ${id}`
+    );
+
+    clearCache(CACHE_KEY);
 
     return res.status(200).json({
       success: true,
@@ -123,6 +198,7 @@ exports.deleteTaskStatus = async (req, res) => {
 
   } catch (err) {
     console.error("DELETE_TASK_STATUS_ERROR:", err);
+
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -131,57 +207,54 @@ exports.deleteTaskStatus = async (req, res) => {
   }
 };
 
-const shuffleArray = (array) => {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-};
-
+// GET ALL
 exports.getAllTaskStatuss = async (req, res) => {
   try {
-    // let taskStatuss = await readJsonFile(TASKSTATUS_FILE_PATH, []);
-    let taskStatuss = await getOrSetCache("statuss_data", () => readJsonFile(TASKSTATUS_FILE_PATH,[]), 700);
+    let statuses = await getTaskStatusList();
 
-
-    const { search, page, limit, random, user_id } = req.query;
-
-    if (user_id) {
-      taskStatuss = taskStatuss.filter(s => String(s.user_id) === String(user_id));
-    }
+    const { search, page, limit, random } = req.query;
 
     if (search) {
-      const searchLower = search.toLowerCase();
-      taskStatuss = taskStatuss.filter(s => 
-        (s.title && s.title.toLowerCase().includes(searchLower)) ||
-        (s.title_kh && s.title_kh.toLowerCase().includes(searchLower)) ||
-        (s.des && s.des.toLowerCase().includes(searchLower)) ||
-        (s.description && s.description.toLowerCase().includes(searchLower))
+      const keyword = String(search).toLowerCase();
+
+      statuses = statuses.filter((status) =>
+        [
+          status.title,
+          status.title_kh,
+          status.des,
+          status.description
+        ].some((field) =>
+          String(field || "").toLowerCase().includes(keyword)
+        )
       );
     }
 
-    if (random === 'true') {
-      taskStatuss = shuffleArray(taskStatuss);
+    if (random === "true") {
+      for (let i = statuses.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [statuses[i], statuses[j]] = [statuses[j], statuses[i]];
+      }
     } else {
-      taskStatuss.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      statuses.sort(
+        (a, b) =>
+          new Date(b.created_at || 0) -
+          new Date(a.created_at || 0)
+      );
     }
 
-    const formattedTaskStatuss = taskStatuss.map(s => ({
-      ...s,
-      created_at: formatBackendDate(s.created_at),
-      updated_at: formatBackendDate(s.updated_at)
+    const formattedStatuses = statuses.map((status) => ({
+      ...status,
+      created_at: formatBackendDate(status.created_at),
+      updated_at: formatBackendDate(status.updated_at)
     }));
 
-    const totalItems = formattedTaskStatuss.length;
+    const totalItems = formattedStatuses.length;
 
-    if (page || limit) {
-      const currentPage = parseInt(page) || 1;
-      const pageSize = parseInt(limit) || 10;
+    if (page !== undefined || limit !== undefined) {
+      const currentPage = Math.max(1, parseInt(page, 10) || 1);
+      const pageSize = Math.max(1, parseInt(limit, 10) || 10);
+
       const startIndex = (currentPage - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-
-      const paginatedData = formattedTaskStatuss.slice(startIndex, endIndex);
 
       return res.json({
         success: true,
@@ -191,18 +264,22 @@ exports.getAllTaskStatuss = async (req, res) => {
           limit: pageSize,
           total_pages: Math.ceil(totalItems / pageSize)
         },
-        data: paginatedData
+        data: formattedStatuses.slice(
+          startIndex,
+          startIndex + pageSize
+        )
       });
     }
 
     return res.json({
       success: true,
       total: totalItems,
-      data: formattedTaskStatuss
+      data: formattedStatuses
     });
 
   } catch (err) {
     console.error("GET_ALL_TASK_STATUSES_ERROR:", err);
+
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -211,31 +288,40 @@ exports.getAllTaskStatuss = async (req, res) => {
   }
 };
 
+// GET BY ID
 exports.getTaskStatusById = async (req, res) => {
   try {
     const { id } = req.params;
-    // const taskStatuss = await readJsonFile(TASKSTATUS_FILE_PATH, []);
-    let taskStatuss = await getOrSetCache("statuss_data", () => readJsonFile(TASKSTATUS_FILE_PATH,[]), 700);
 
-    const taskStatus = taskStatuss.find(s => String(s.id) === String(id));
+    const statuses = await getTaskStatusList();
 
-    if (!taskStatus) {
-      return res.status(404).json({ success: false, message: "រកមិនឃើញ task Status នេះឡើយ" });
+    const status = statuses.find(
+      (item) => String(item.id) === String(id)
+    );
+
+    if (!status) {
+      return res.status(404).json({
+        success: false,
+        message: "រកមិនឃើញ Task Status នេះឡើយ"
+      });
     }
-
-    const formattedTaskStatus = {
-      ...taskStatus,
-      created_at: formatBackendDate(taskStatus.created_at),
-      updated_at: formatBackendDate(taskStatus.updated_at)
-    };
 
     return res.json({
       success: true,
-      data: formattedTaskStatus
+      data: {
+        ...status,
+        created_at: formatBackendDate(status.created_at),
+        updated_at: formatBackendDate(status.updated_at)
+      }
     });
-    
+
   } catch (err) {
     console.error("GET_TASK_STATUS_BY_ID_ERROR:", err);
-    return res.status(500).json({ success: false, message: "Server error", error: err.message });
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message
+    });
   }
 };

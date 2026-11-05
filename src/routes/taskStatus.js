@@ -1,16 +1,24 @@
 const router = require("express").Router();
+
 const taskStatusController = require("../controllers/taskStatusController.js");
+
 const authMiddleware = require("../middlewares/authMiddleware.js");
-const { validateTaskStatus } = require("../validators/taskStatusValidator.js");
-const uploadMiddleware = require("../middlewares/uploadMiddleware.js"); 
+const adminMiddleware = require("../middlewares/adminMiddleware.js");
 
-router.get("/", taskStatusController.getAllTaskStatuss);
-router.get("/:id", taskStatusController.getTaskStatusById);
+const {
+  validateTaskStatus
+} = require("../validators/taskStatusValidator.js");
 
+const uploadMiddleware = require("../middlewares/uploadMiddleware.js");
 
+router.get("/", authMiddleware, taskStatusController.getAllTaskStatuss);
+router.get("/:id", authMiddleware, taskStatusController.getTaskStatusById);
+
+// WRITE: Admin only
 router.post(
   "/",
   authMiddleware,
+  adminMiddleware,
   uploadMiddleware.none(),
   validateTaskStatus,
   taskStatusController.createTaskStatus
@@ -19,11 +27,17 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
+  adminMiddleware,
   uploadMiddleware.none(),
   validateTaskStatus,
   taskStatusController.updateTaskStatus
 );
 
-router.delete("/:id", authMiddleware, taskStatusController.deleteTaskStatus);
+router.delete(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  taskStatusController.deleteTaskStatus
+);
 
 module.exports = router;

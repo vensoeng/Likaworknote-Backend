@@ -20,125 +20,6 @@ const { createUserFiles } = require("../helper/userFileService");
 
 const { getOrSetCache, clearCache } = require("../helper/cacheService");
 
-// exports.register = async (req, res) => {
-
-//   try {
-
-//     // console.log("REQUEST BODY:", req.body);
-//     // console.log("REQUEST FILE:", req.file);
-
-//     const { email, password } = req.body;
-    
-//     // validation
-//     if (!email || !password) {
-//       return res.status(400).json({
-//         message: "email and password required"
-//       });
-//     }
-
-//     // const users = await readJsonFile(USERS_FILE_PATH, []);
-//     let users = await getOrSetCache("users_data", () => readJsonFile(USERS_FILE_PATH, []), 700);
-//     // check existing user
-//     const exist = users.find(
-//       u => u.email === email
-//     );
-
-//     if (exist) {
-//       return res.status(400).json({
-//         message: "User already exists"
-//       });
-//     }
-
-//     // const { username, firstName, lastName, gender, birthday, role = 2, opt = null, telgram_id = null } = req.body;
-//     const { firstName, lastName} = req.body;
-    
-
-//     // hash password
-//     const hash = await bcrypt.hash(password, 10);
-
-//     let imageName = null;
-//     if (req.file?.buffer) {
-//       const processed = await compressToTargetSize(req.file.buffer, req.file.mimetype);
-//       imageName = makeImageName(processed.extension);
-//       const githubImagePath = `${UPLOADS_DIR}/${imageName}`;
-//       await uploadBufferFile(githubImagePath, processed.buffer, `uploads: create ${imageName}`);
-//     }
-
-//     // create user
-//     const id = Date.now();
-//     const safeFirstName = firstName || "user";
-//     const safeLastName = lastName || "";
-//     const usernameToUse = `${safeFirstName.toLowerCase()}.${safeLastName.toLowerCase()}${id}`;
-
-//     const newUser = new User({
-//       id,
-//       username: usernameToUse,
-//       firstName,
-//       lastName,
-//       pr_img: imageName,
-//       gender: '',
-//       birthday: '',
-//       email,
-//       password: hash,
-//       role: 2,
-//       opt: null,
-//       telgram_id: null,
-//     });
-
-//     // generate access token (short-lived)
-//     const accessToken = jwt.sign(
-//       {
-//         id: newUser.id,
-//         email: newUser.email,
-//         username: newUser.username,
-//         role: newUser.role
-//       },
-//       SECRET,
-//       { expiresIn: "30m" }
-//     );
-
-//     // generate refresh token (long-lived)
-//     const refreshToken = jwt.sign(
-//       {
-//         id: newUser.id,
-//         email: newUser.email
-//       },
-//       SECRET,
-//       { expiresIn: "7d" }
-//     );
-
-//     // add refresh token to user
-//     newUser.refreshToken = refreshToken;
-//     users.push(newUser);
-//     await writeJsonFile(USERS_FILE_PATH, users, `users: register ${newUser.email}`);
-
-//     res.status(201).json({
-//       message: "User created",
-//       accessToken,
-//       refreshToken,
-//       user: {
-//         id: newUser.id,
-//         email: newUser.email,
-//         username: newUser.username,
-//         firstName: newUser.firstName,
-//         lastName: newUser.lastName,
-//         pr_img: newUser.pr_img,
-//         gender: newUser.gender,
-//         birthday: newUser.birthday,
-//         role: newUser.role,
-//         telgram_id: newUser.telgram_id,
-//       }
-//     });
-
-//   } catch (err) {
-
-//     res.status(500).json({
-//       message: "Server error"
-//     });
-
-//   }
-// };
-
 exports.register = async (req, res) => {
   try {
     const { email, password, firstName, lastName } = req.body;
@@ -376,22 +257,6 @@ exports.login = async (req, res) => {
 
   }
 };
-
-//get only user data
-// exports.me = (req, res) => {
-//   try {
-//     res.json({
-//       message: "User data fetched successfully",
-//       user: req.user
-//     });
-//   } catch (err) {
-//     res.status(500).json({
-//       message: "Server error"
-//     });
-//   }
-// };
-// backend/controllers/authController.js
-
 
 exports.me = async (req, res) => {
   try {
@@ -684,29 +549,6 @@ exports.updateMe = async (req, res) => {
     });
   }
 };
-
-
-// exports.logout = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const users = await readJsonFile(USERS_FILE_PATH, []);
-    
-//     const userIndex = users.findIndex(u => u.id === userId);
-//     if (userIndex !== -1) {
-//       users[userIndex].refreshToken = null;
-//       await writeJsonFile(USERS_FILE_PATH, users, `users: logout ${users[userIndex].email}`);
-//     }
-
-//     res.json({
-//       message: "Logged out successfully"
-//     });
-
-//   } catch (err) {
-//     res.status(500).json({
-//       message: "Server error"
-//     });
-//   }
-// };
 
 exports.logout = async (req, res) => {
   try {

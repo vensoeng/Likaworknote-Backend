@@ -1,7 +1,6 @@
 class TaskStatus {
   constructor({
     id = Date.now(),
-    user_id = null,
     title,
     des = "",
     value = "",
@@ -9,7 +8,6 @@ class TaskStatus {
     updated_at = new Date()
   } = {}) {
     this.id = id;
-    this.user_id = user_id;
     this.title = title;
     this.des = des;
     this.value = value;
