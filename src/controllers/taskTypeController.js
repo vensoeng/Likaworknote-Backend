@@ -42,7 +42,7 @@ const saveUserTaskTypes = async (userId, taskTypes, message) => {
   const { filePath, cacheKey } = getTaskTypeStorage(userId);
 
   await writeJsonFile(filePath, taskTypes, message);
-  clearCache(cacheKey);
+  await clearCache(cacheKey);
 };
 
 // CREATE

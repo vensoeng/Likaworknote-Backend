@@ -46,7 +46,7 @@ const saveUserCategories = async (userId, categories, message) => {
   const { filePath, cacheKey } = getCategoryStorage(userId);
 
   await writeJsonFile(filePath, categories, message);
-  clearCache(cacheKey);
+  await clearCache(cacheKey);
 };
 
 // CREATE

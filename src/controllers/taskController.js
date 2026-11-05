@@ -93,7 +93,7 @@ const saveUserTasks = async (
   message
 ) => {
   await writeJsonFile(userFiles.tasks, tasks, message);
-  clearCache(cacheKey);
+  await clearCache(cacheKey);
 };
 
 const getAuthenticatedUserId = (req, res) => {
