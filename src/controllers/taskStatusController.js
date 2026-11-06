@@ -10,10 +10,10 @@ const {
 } = require("../helper/cacheService");
 
 const TASKSTATUS_FILE_PATH =
-  process.env.TASKSTATUS_FILE_PATH || "src/db/taskStatus.json";
+  process.env.TASKSTATUS_FILE_PATH || "data/status/datas.json";
 
 const CACHE_KEY = "statuss_data";
-const CACHE_TTL = 700;
+const CACHE_TTL = 900;
 
 const getTaskStatusList = async () => {
   const cached = await getOrSetCache(

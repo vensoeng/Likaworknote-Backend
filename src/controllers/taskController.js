@@ -12,9 +12,9 @@ const {
 
 const { getUserFilePaths } = require("../helper/userFileService");
 
-const TASK_STATUS_FILE_PATH =
-  process.env.TASK_STATUS_FILE_PATH ||
-  "src/db/taskstatus.json";
+const TASKSTATUS_FILE_PATH =
+  process.env.TASKSTATUS_FILE_PATH ||
+  "data/status/datas.json";
 
 // =====================================================
 // CONSTANTS
@@ -168,7 +168,7 @@ const validateTaskEntities = async (taskData, userId) => {
       name: "ការបែងចែកការងារ",
     },
     {
-      path: TASK_STATUS_FILE_PATH,
+      path: TASKSTATUS_FILE_PATH,
       key: TASK_STATUS_CACHE_KEY,
       id: taskData.statuses_id,
       name: "ស្ថានភាព",
