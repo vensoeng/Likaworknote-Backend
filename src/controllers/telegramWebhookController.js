@@ -84,7 +84,7 @@ router.post("/", async (req, res) => {
             "",
             "សូមរង់ចាំមួយភ្លែត យើងកំពុងរៀបចំបង្កើតគណនីជូនអ្នក។"
           ].join("\n"),
-          'https://likaworknoteapi.vercel.app/assets/welcome_lika.gif',
+          "https://likaworknoteapi.vercel.app/assets/sorry_lika.gif",
         );
 
         console.log("Welcome animation sent successfully");
@@ -123,7 +123,7 @@ router.post("/", async (req, res) => {
               "",
               "បើបញ្ហានៅតែបន្ត សូមទាក់ទង Support។"
             ].join("\n"),
-            'https://likaworknoteapi.vercel.app/assets/sorry_lika.gif',
+            "https://likaworknoteapi.vercel.app/assets/sorry_lika.gif",
             getContactKeyboard()
           );
 
