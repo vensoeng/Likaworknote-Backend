@@ -43,15 +43,12 @@ const sendAnimation = async (
       animation: imageUrl,
       caption,
       parse_mode: "HTML",
-      ...(replyMarkup
-        ? { reply_markup: replyMarkup }
-        : {})
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {})
     }
   );
 
   return response.data;
 };
-
 const sendMessage = async (chatId, text, replyMarkup = undefined) => {
   const response = await axios.post(`${getBotUrl()}/sendMessage`, {
     chat_id: chatId,
@@ -241,17 +238,17 @@ const handleStart = async (telegramUser, chatId) => {
       : undefined;
 
     await sendAnimation(
-        chatId,
-        [
-            "សូមអភ័យទោសផង! 🙏",
-            "",
-            `សម្រាប់កំណែដំបូង LikaWorkNote បង្កើតឡើងសម្រាប់អ្នកប្រើប្រាស់ ${MAX_USERS} នាក់ចុះក្រោមប៉ុណ្ណោះ។`,
-            "",
-            "បច្ចុប្បន្នមានអ្នកប្រើប្រាស់គ្រប់ចំនួនហើយ។",
-            "សូមទាក់ទងមកកាន់យើងខ្ញុំ ដើម្បីដោះស្រាយ។"
-        ].join("\n"),
-        "https://likaworknoteapi.vercel.app/assets/sorry_lika.gif",
-        keyboard
+      chatId,
+      [
+        "សូមអភ័យទោសផង! 🙏",
+        "",
+        `សម្រាប់កំណែដំបូង LikaWorkNote បង្កើតឡើងសម្រាប់អ្នកប្រើប្រាស់ ${MAX_USERS} នាក់ចុះក្រោមប៉ុណ្ណោះ។`,
+        "",
+        "បច្ចុប្បន្នមានអ្នកប្រើប្រាស់គ្រប់ចំនួនហើយ។",
+        "សូមទាក់ទងមកកាន់យើងខ្ញុំ ដើម្បីដោះស្រាយ។"
+      ].join("\n"),
+      "https://likaworknoteapi.vercel.app/assets/sorry_lika.gif",
+      keyboard
     );
 
     return { status: "limit_reached" };
@@ -301,10 +298,10 @@ const handleStart = async (telegramUser, chatId) => {
 
     // Send after account has been saved.
     await sendAnimation(
-        chatId,
-        buildSuccessMessage(newUser, temporaryPassword),
-        "https://likaworknoteapi.vercel.app/assets/success_lika.gif",
-        getMiniAppKeyboard()
+      chatId,
+      buildSuccessMessage(newUser, temporaryPassword),
+      "https://likaworknoteapi.vercel.app/assets/success_lika.gif",
+      getMiniAppKeyboard()
     );
 
   return { status: "created", userId: newUser.id };
