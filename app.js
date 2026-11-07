@@ -68,6 +68,13 @@ app.use("/mytask", require('./src/routes/taskToday'));
 // for automation cron 
 app.use("/cron", require("./src/routes/cron"));
 
+//For telegram webhook work
+const telegramWebhook = require("./src/controllers/telegramWebhookController");
+app.use(
+  "/api/telegram/webhook",
+  telegramWebhook
+);
+
 app.get("/", (req, res) => {  
     res.send("Work note work!");
 });
