@@ -1,19 +1,21 @@
+
 class User {
   constructor({
     id,
     username,
     firstName,
     lastName,
-    pr_img,
-    gender,
-    birthday,
+    pr_img = null,
+    gender = "",
+    birthday = "",
     email,
     password,
-    role,
+    role = 2,
     opt = null,
-    telgram_id = null,
-    created_at = new Date(),
-    updated_at = new Date()
+    telegram_id = null,
+    must_change_password = false,
+    created_at = new Date().toISOString(),
+    updated_at = new Date().toISOString()
   }) {
     this.id = id;
     this.username = username;
@@ -26,7 +28,8 @@ class User {
     this.password = password;
     this.role = role;
     this.opt = opt;
-    this.telgram_id = telgram_id;
+    this.telegram_id = telegram_id;
+    this.must_change_password = must_change_password;
     this.created_at = created_at;
     this.updated_at = updated_at;
   }
