@@ -53,14 +53,19 @@ router.post("/", async (req, res) => {
     return res.status(200).json({ ok: true });
 
   } catch (error) {
+    console.error("TELEGRAM WEBHOOK FAILED");
+
+    console.error("Error:", error.message);
+    console.error("Stack:", error.stack);
+
     console.error(
-      "TELEGRAM_WEBHOOK_ERROR:",
-      error.response?.data || error.stack || error.message
+      "Telegram API Response:",
+      error.response?.data
     );
 
     return res.status(500).json({
       ok: false,
-      message: "Webhook processing failed"
+      message: error.message
     });
   }
 });

@@ -49,7 +49,6 @@ const sendAnimation = async (
   if (!fs.existsSync(animationPath)) {
     throw new Error(`Animation file not found: ${animationPath}`);
   }
-
   const form = new FormData();
 
   form.append("chat_id", String(chatId));
