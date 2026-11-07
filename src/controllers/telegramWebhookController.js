@@ -9,9 +9,25 @@ const { handleStart } = require("../services/telegramBotService");
 
 router.post("/", async (req, res) => {
   try {
-    const secret = req.headers["x-telegram-bot-api-secret-token"];
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
-    if (secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+    const telegramSecret =
+      req.headers["x-telegram-bot-api-secret-token"];
+
+    const authorization = req.headers.authorization || "";
+
+    const bearerToken = authorization.startsWith("Bearer ")
+      ? authorization.slice(7).trim()
+      : "";
+
+    const isAuthorized =
+      webhookSecret &&
+      (
+        telegramSecret === webhookSecret ||
+        bearerToken === webhookSecret
+      );
+
+    if (!isAuthorized) {
       return res.status(401).json({
         ok: false,
         message: "Unauthorized"
@@ -27,12 +43,20 @@ router.post("/", async (req, res) => {
       );
     }
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({
+      ok: true
+    });
 
   } catch (error) {
-    console.error("TELEGRAM_WEBHOOK_ERROR:", error);
+    console.error(
+      "TELEGRAM_WEBHOOK_ERROR:",
+      error.stack || error
+    );
 
-    return res.status(500).json({ ok: false });
+    return res.status(500).json({
+      ok: false,
+      message: "Webhook processing failed"
+    });
   }
 });
 
