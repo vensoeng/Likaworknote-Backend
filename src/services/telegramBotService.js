@@ -33,7 +33,7 @@ const getBotUrl = () =>
 const sendAnimation = async (
   chatId,
   caption,
-  image = "src/assets/welcome_lika.gif",
+  image = "https://likaworknoteapi.vercel.app/assets/welcome_lika.gif",
   replyMarkup = undefined
 ) => {
   console.log("DEBUG sendAnimation:", {
@@ -232,7 +232,7 @@ const handleStart = async (telegramUser, chatId) => {
     await sendAnimation(
         chatId,
         message,
-        "src/assets/welcome_lika.gif",
+        "https://likaworknoteapi.vercel.app/assets/welcome_lika.gif",
         getMiniAppKeyboard()
     );
     return { status: "existing_user" };
@@ -264,7 +264,7 @@ const handleStart = async (telegramUser, chatId) => {
             "បច្ចុប្បន្នមានអ្នកប្រើប្រាស់គ្រប់ចំនួនហើយ។",
             "សូមទាក់ទងមកកាន់យើងខ្ញុំ ដើម្បីដោះស្រាយ។"
         ].join("\n"),
-        "src/assets/sorry_lika.gif",
+        "https://likaworknoteapi.vercel.app/assets/sorry_lika.gif",
         keyboard
     );
 
@@ -317,7 +317,7 @@ const handleStart = async (telegramUser, chatId) => {
     await sendAnimation(
         chatId,
         buildSuccessMessage(newUser, temporaryPassword),
-        "src/assets/success_lika.gif",
+        "https://likaworknoteapi.vercel.app/assets/success_lika.gif",
         getMiniAppKeyboard()
     );
 

@@ -37,7 +37,12 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'User-Agent', 'X-Requested-With']
 }));
 
+
 app.use(express.json());
+
+// Serve all files inside the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));
+
 // auth routes
 app.use("/auth", require('./src/routes/auth'));
 //task type routes

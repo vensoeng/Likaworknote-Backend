@@ -83,7 +83,7 @@ const poll = async () => {
                         "",
                         "បើបញ្ហានៅតែបន្ត សូមទាក់ទង Support។"
                     ].join("\n"),
-                    "src/assets/sorry_lika.gif",
+                    "https://likaworknoteapi.vercel.app/assets/sorry_lika.gif",
                     process.env.TELEGRAM_CONTACT_URL
                     ? {
                         inline_keyboard: [[
