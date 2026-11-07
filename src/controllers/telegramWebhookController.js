@@ -8,49 +8,54 @@ const router = express.Router();
 const { handleStart } = require("../services/telegramBotService");
 
 router.post("/", async (req, res) => {
-  try {
-    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const update = req.body;
 
+  try {
+    console.log("========== TELEGRAM WEBHOOK ==========");
+    console.log("Update ID:", update?.update_id);
+    console.log("Message:", update?.message?.text);
+    console.log("Chat ID:", update?.message?.chat?.id);
+    console.log("======================================");
+
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
     const telegramSecret =
       req.headers["x-telegram-bot-api-secret-token"];
 
-    const authorization = req.headers.authorization || "";
-
-    const bearerToken = authorization.startsWith("Bearer ")
-      ? authorization.slice(7).trim()
-      : "";
-
     const isAuthorized =
-      webhookSecret &&
-      (
-        telegramSecret === webhookSecret ||
-        bearerToken === webhookSecret
-      );
+      Boolean(webhookSecret) &&
+      telegramSecret === webhookSecret;
 
     if (!isAuthorized) {
+      console.error("Webhook unauthorized");
+
       return res.status(401).json({
         ok: false,
         message: "Unauthorized"
       });
     }
 
-    const update = req.body;
+    const message = update?.message;
 
-    if (update.message?.text?.startsWith("/start")) {
-      await handleStart(
-        update.message.from,
-        update.message.chat.id
-      );
+    if (!message) {
+      return res.status(200).json({ ok: true });
     }
 
-    return res.status(200).json({
-      ok: true
-    });
+    const text = message.text?.trim() || "";
+
+    if (/^\/start(?:@\w+)?(?:\s+.*)?$/i.test(text)) {
+      console.log("Processing /start for:", message.from?.id);
+
+      await handleStart(message.from, message.chat.id);
+
+      console.log("/start processed successfully");
+    }
+
+    return res.status(200).json({ ok: true });
 
   } catch (error) {
     console.error(
       "TELEGRAM_WEBHOOK_ERROR:",
-      error.stack || error
+      error.response?.data || error.stack || error.message
     );
 
     return res.status(500).json({

@@ -10,13 +10,13 @@ const path = require('path');
 const app = express();
 
 const allowedOrigins = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://vensoeng.vercel.app',
-    'https://vensoeng.free.nf',
-    'https://vensoeng.github.io',
+    // 'http://localhost:3000',
+    // 'http://127.0.0.1:3000',
+    // 'http://localhost:5173',
+    // 'http://127.0.0.1:5173',
+    // 'https://vensoeng.vercel.app',
+    // 'https://vensoeng.free.nf',
+    // 'https://vensoeng.github.io',
     'https://likaworknote.vercel.app',
     process.env.FRONTEND_URL
 ].filter(Boolean);
@@ -75,6 +75,7 @@ app.use(
   telegramWebhook
 );
 
+//this is for App 
 app.get("/", (req, res) => {  
     res.send("Work note work!");
 });
