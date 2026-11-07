@@ -6,10 +6,6 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const axios = require("axios");
 
-const fs = require("fs");
-const path = require("path");
-const FormData = require("form-data");
-
 const User = require("../models/User");
 
 const {
@@ -33,37 +29,27 @@ const getBotUrl = () =>
 const sendAnimation = async (
   chatId,
   caption,
-  image = "https://likaworknoteapi.vercel.app/assets/welcome_lika.gif",
+  imageUrl,
   replyMarkup = undefined
 ) => {
-  console.log("DEBUG sendAnimation:", {
-    chatId,
-    captionType: typeof caption,
-    image,
-    imageType: typeof image,
-    replyMarkup
-  });
-
-  const animationPath = path.resolve(process.cwd(), image);
-
-  if (!fs.existsSync(animationPath)) {
-    throw new Error(`Animation file not found: ${animationPath}`);
-  }
-  const form = new FormData();
-
-  form.append("chat_id", String(chatId));
-  form.append("animation", fs.createReadStream(animationPath));
-  form.append("caption", caption);
-  form.append("parse_mode", "HTML");
-
-  if (replyMarkup) {
-    form.append("reply_markup", JSON.stringify(replyMarkup));
+  if (!imageUrl) {
+    throw new Error("Animation URL is missing");
   }
 
-  return axios.post(`${getBotUrl()}/sendAnimation`, form, {
-    headers: form.getHeaders(),
-    maxBodyLength: Infinity
-  });
+  const response = await axios.post(
+    `${getBotUrl()}/sendAnimation`,
+    {
+      chat_id: chatId,
+      animation: imageUrl,
+      caption,
+      parse_mode: "HTML",
+      ...(replyMarkup
+        ? { reply_markup: replyMarkup }
+        : {})
+    }
+  );
+
+  return response.data;
 };
 
 const sendMessage = async (chatId, text, replyMarkup = undefined) => {
