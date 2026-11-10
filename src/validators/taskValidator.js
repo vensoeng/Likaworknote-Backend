@@ -11,13 +11,6 @@ const taskFields = {
     "any.required": "សូមជ្រើសរើសប្រភេទភារកិច្ច",
   }),
 
-  category_id: Joi.number().integer().min(3).required().messages({
-    "number.base": "សូមជ្រើសរើសបែងចែកការងារ",
-    "number.integer": "សូមជ្រើសរើសបែងចែកការងារ",
-    "number.min": "សូមជ្រើសរើសបែងចែកការងារ",
-    "any.required": "សូមជ្រើសរើសបែងចែកការងារ",
-  }),
-
   schedule: Joi.string()
     .pattern(/^\d{4}-\d{2}-\d{2}$/)
     .required()

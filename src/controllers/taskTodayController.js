@@ -122,7 +122,6 @@ const loadUserData = async (userId) => {
   const [
     tasks,
     taskTypes,
-    taskCategories,
     shared
   ] = await Promise.all([
     getOrSetCache(`tasks_${userId}`, () =>
@@ -133,10 +132,6 @@ const loadUserData = async (userId) => {
       readJsonFile(userFiles.types, [])
     ),
 
-    getOrSetCache(`categories_${userId}`, () =>
-      readJsonFile(userFiles.categories, [])
-    ),
-
     loadSharedData()
   ]);
 
@@ -145,7 +140,6 @@ const loadUserData = async (userId) => {
 
     maps: {
       type: toMap(taskTypes),
-      category: toMap(taskCategories),
       status: shared.status,
     }
   };
@@ -157,10 +151,6 @@ const loadUserData = async (userId) => {
 
 const formatTask = (task, maps) => {
   const type = maps.type.get(String(task.type_id));
-
-  const category = maps.category.get(
-    String(task.category_id)
-  );
 
   const statusId = String(task.statuses_id);
   const status = maps.status.get(statusId);
@@ -179,15 +169,6 @@ const formatTask = (task, maps) => {
           id: type.id,
           title: type.title,
           des: type.des
-        }
-      : null,
-
-    category: category
-      ? {
-          id: category.id,
-          title: category.title,
-          des: category.des,
-          status: category.status
         }
       : null,
 
@@ -258,70 +239,6 @@ exports.myTasksToday = async (req, res) => {
 
   } catch (err) {
     console.error("GET_MY_TASKS_TODAY_ERROR:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: err.message
-    });
-  }
-};
-
-// =====================================================
-// CATEGORY
-// GET /user/:user_id/category/:category_id
-// =====================================================
-
-exports.tasksByCategory = async (req, res) => {
-  try {
-    const userId = req.params.user_id;
-    const categoryId = req.params.category_id;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "User ID is required"
-      });
-    }
-
-    // Load only this user's files
-    const { tasks, maps } = await loadUserData(userId);
-
-    let filteredTasks;
-
-    if (categoryId === "all") {
-      // All tasks belonging to this user
-      filteredTasks = tasks;
-
-    } else {
-      // Find category only inside this user's category file
-      const category = maps.category.get(
-        String(categoryId)
-      );
-
-      if (!category) {
-        return res.status(404).json({
-          success: false,
-          message: "Category not found"
-        });
-      }
-
-      filteredTasks = tasks.filter(
-        (task) =>
-          String(task.category_id) === String(category.id) &&
-          String(task.user_id) === String(userId)
-      );
-    }
-
-    return res.json({
-      success: true,
-      data: filteredTasks
-        .sort(sortNewestFirst)
-        .map((task) => formatTask(task, maps))
-    });
-
-  } catch (err) {
-    console.error("GET_TASKS_BY_CATEGORY_ERROR:", err);
 
     return res.status(500).json({
       success: false,
@@ -554,10 +471,6 @@ exports.publicCompletedTasksByDate = async (req, res) => {
     const data = completedTasks.map((task) => {
       const type = maps.type.get(String(task.type_id));
 
-      const category = maps.category.get(
-        String(task.category_id)
-      );
-
       const status = maps.status.get(
         String(task.statuses_id)
       );
@@ -578,13 +491,6 @@ exports.publicCompletedTasksByDate = async (req, res) => {
           ? {
               id: type.id,
               title: type.title
-            }
-          : null,
-
-        category: category
-          ? {
-              id: category.id,
-              title: category.title
             }
           : null,
 

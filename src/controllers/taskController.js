@@ -26,7 +26,6 @@ const ALLOWED_UPDATE_FIELDS = [
   "title",
   "des",
   "type_id",
-  "category_id",
   "schedule",
   "statuses_id",
   "rate",
@@ -162,12 +161,6 @@ const validateTaskEntities = async (taskData, userId) => {
       name: "ប្រភេទភារកិច្ច",
     },
     {
-      path: userFiles.categories,
-      key: `categories_${userId}`,
-      id: taskData.category_id,
-      name: "ការបែងចែកការងារ",
-    },
-    {
       path: TASKSTATUS_FILE_PATH,
       key: TASK_STATUS_CACHE_KEY,
       id: taskData.statuses_id,
@@ -233,7 +226,6 @@ exports.createTask = async (req, res) => {
       status: taskData.status ?? true,
       user_id: currentUserId,
       type_id: Number(taskData.type_id),
-      category_id: Number(taskData.category_id),
       schedule: taskData.schedule,
       statuses_id: Number(taskData.statuses_id),
       title: taskData.title,
@@ -335,10 +327,6 @@ exports.updateTask = async (req, res) => {
     // Normalize numeric fields.
     if (safeUpdates.type_id !== undefined) {
       safeUpdates.type_id = Number(safeUpdates.type_id);
-    }
-
-    if (safeUpdates.category_id !== undefined) {
-      safeUpdates.category_id = Number(safeUpdates.category_id);
     }
 
     if (safeUpdates.statuses_id !== undefined) {
